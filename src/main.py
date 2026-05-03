@@ -12,8 +12,12 @@ def main():
     
     app = QApplication(sys.argv)
     
-    # Apply modern dark theme
-    qdarktheme.setup_theme("dark", custom_colors={"primary": "#8a2be2"}) # Deep purple accent
+    # Apply modern dark theme, with fallback for older pyqtdarktheme versions
+    try:
+        qdarktheme.setup_theme("dark", custom_colors={"primary": "#8a2be2"}) # Deep purple accent
+    except AttributeError:
+        # Fallback for pyqtdarktheme 0.1.x
+        app.setStyleSheet(qdarktheme.load_stylesheet("dark"))
     
     window = MainWindow()
     window.show()
