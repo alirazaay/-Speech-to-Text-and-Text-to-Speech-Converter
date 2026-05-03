@@ -11,6 +11,7 @@ class AudioPanel(QWidget):
         super().__init__()
         self.file_path = None
         self.worker = None
+        self.setAcceptDrops(True)
         self.init_ui()
 
     def init_ui(self):
@@ -47,6 +48,11 @@ class AudioPanel(QWidget):
         lang_layout.addStretch()
         layout.addLayout(lang_layout)
 
+        # Waveform Visualizer
+        from ui.components.waveform import WaveformWidget
+        self.waveform = WaveformWidget()
+        layout.addWidget(self.waveform)
+
         # Progress
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
@@ -56,12 +62,11 @@ class AudioPanel(QWidget):
         layout.addWidget(self.progress_bar)
         layout.addWidget(self.lbl_status)
 
-        # Output
-        self.txt_output = QTextEdit()
-        self.txt_output.setReadOnly(True)
-        self.txt_output.setPlaceholderText("Translation output will appear here...")
-        self.txt_output.setStyleSheet("background-color: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 10px;")
-        layout.addWidget(self.txt_output)
+        # Output (Timeline View)
+        from ui.components.timeline_view import TimelineView
+        self.timeline_view = TimelineView()
+        self.timeline_view.play_requested.connect(self.play_audio_segment)
+        layout.addWidget(self.timeline_view)
 
         # Action Buttons
         self.btn_translate = QPushButton("Translate")
@@ -69,11 +74,38 @@ class AudioPanel(QWidget):
         self.btn_translate.clicked.connect(self.start_translation)
         layout.addWidget(self.btn_translate)
 
+    def play_audio_segment(self, start_ms, end_ms):
+        # We will implement QMediaPlayer or simple audio playback here later
+        print(f"Playing segment: {start_ms}ms to {end_ms}ms")
+
     def select_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Audio", Config.DATA_DIR, "Audio Files (*.mp3 *.wav *.ogg *.m4a *.flac)")
         if path:
             self.file_path = path
             self.lbl_file.setText(path.split("/")[-1])
+            self.waveform.load_audio(path)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+            self.lbl_file.setStyleSheet("color: white; border: 2px dashed #8a2be2; background-color: #2a2a4a; padding: 10px; border-radius: 5px;")
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        self.lbl_file.setStyleSheet("color: #aaaaaa; border: 1px dashed #555; padding: 10px; border-radius: 5px;")
+
+    def dropEvent(self, event):
+        self.dragLeaveEvent(event)
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        if files:
+            path = files[0]
+            if path.lower().endswith(('.mp3', '.wav', '.ogg', '.m4a', '.flac')):
+                self.file_path = path
+                self.lbl_file.setText(path.split("/")[-1] if "/" in path else path.split("\\")[-1])
+                self.waveform.load_audio(path)
+            else:
+                self.lbl_status.setText("Invalid file format. Please drop an audio file.")
 
     def start_translation(self):
         if not self.file_path:
@@ -83,7 +115,7 @@ class AudioPanel(QWidget):
         self.btn_translate.setEnabled(False)
         self.progress_bar.setValue(0)
         self.progress_bar.show()
-        self.txt_output.clear()
+        self.timeline_view.clear()
 
         source = self.cmb_source.currentText()
         target = self.cmb_target.currentText()
@@ -101,7 +133,11 @@ class AudioPanel(QWidget):
     def on_finished(self, transcribed, translated, audio_out):
         self.progress_bar.hide()
         self.lbl_status.setText(f"Success! Audio saved to: {audio_out}")
-        self.txt_output.setText(f"--- TRANSCRIBED ---\n{transcribed}\n\n--- TRANSLATED ---\n{translated}")
+        
+        # In a fully chunked system, the worker would emit chunks. 
+        # Since we're bridging the old monolithic API, we add the whole block as one chunk.
+        self.timeline_view.add_block(transcribed, translated, 0, 5000)
+        
         self.btn_translate.setEnabled(True)
 
     def on_error(self, err):
