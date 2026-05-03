@@ -53,11 +53,15 @@ class MainWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.stacked_widget.setStyleSheet("background-color: #16213e;")
         
-        # Placeholders for Panels
-        self.panel_audio = self.create_placeholder_panel("Audio Translator Panel\n(Drag & Drop Audio Files Here)")
-        self.panel_live = self.create_placeholder_panel("Live Speech Panel\n(Real-time Dictation)")
-        self.panel_pdf = self.create_placeholder_panel("PDF Translator Panel\n(Upload PDF to Translate)")
-        self.panel_history = self.create_placeholder_panel("History Panel\n(Past Translations)")
+        # Real Panels
+        from ui.panels.audio_panel import AudioPanel
+        from ui.panels.live_panel import LivePanel
+        from ui.panels.pdf_panel import PDFPanel
+
+        self.panel_audio = AudioPanel()
+        self.panel_live = LivePanel()
+        self.panel_pdf = PDFPanel()
+        self.panel_history = self.create_placeholder_panel("History Panel\n(Past Translations - SQLite Integration Coming Soon)")
         
         self.stacked_widget.addWidget(self.panel_audio)
         self.stacked_widget.addWidget(self.panel_live)
