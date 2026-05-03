@@ -10,6 +10,7 @@ class PDFPanel(QWidget):
         super().__init__()
         self.file_path = None
         self.worker = None
+        self.setAcceptDrops(True)
         self.init_ui()
 
     def init_ui(self):
@@ -73,6 +74,27 @@ class PDFPanel(QWidget):
         if path:
             self.file_path = path
             self.lbl_file.setText(path.split("/")[-1])
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+            self.lbl_file.setStyleSheet("color: white; border: 2px dashed #8a2be2; background-color: #2a2a4a; padding: 10px; border-radius: 5px;")
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        self.lbl_file.setStyleSheet("color: #aaaaaa; border: 1px dashed #555; padding: 10px; border-radius: 5px;")
+
+    def dropEvent(self, event):
+        self.dragLeaveEvent(event)
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        if files:
+            path = files[0]
+            if path.lower().endswith('.pdf'):
+                self.file_path = path
+                self.lbl_file.setText(path.split("/")[-1] if "/" in path else path.split("\\")[-1])
+            else:
+                self.lbl_status.setText("Invalid file format. Please drop a PDF.")
 
     def start_translation(self):
         if not self.file_path:
